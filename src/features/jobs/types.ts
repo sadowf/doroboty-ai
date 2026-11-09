@@ -1,3 +1,5 @@
+import type { ContributionCardMode } from "@/features/prototype/contribution-card";
+
 export const jobCategories = ["build", "apply", "lead"] as const;
 export const jobFunctions = [
   "product",
@@ -61,6 +63,8 @@ export type Job = {
   publishedAt: string;
   expiryAt: string;
   verificationStatus: "unverified" | "editorial" | "employer_verified";
+  /** P1A contribution-card mode; absent means no card. */
+  contributionCard?: ContributionCardMode;
 };
 
 export type JobWithCompany = Job & { company: Company };

@@ -2,6 +2,13 @@ import { z } from "zod";
 import marketplace from "./data/marketplace.json" with { type: "json" };
 import people from "./data/people.json" with { type: "json" };
 import type { JobWithCompany } from "@/features/jobs/types";
+import {
+  buildContributionSnapshot,
+  contributionCardInputSchema,
+  contributionCardModes,
+  contributionCardSnapshotSchema,
+  type ContributionCardInput,
+} from "./contribution-card";
 
 const id = z
   .string()
@@ -53,6 +60,8 @@ export const jobSchema = z
     verificationStatus: z.enum(["unverified", "editorial", "employer_verified"]),
     sourceBrief: text.optional(),
     generatedDescription: text.optional(),
+    /** P1A: older saves/exports and the fixtures have no field and mean "no card". */
+    contributionCard: z.enum(contributionCardModes).default("none"),
   })
   .refine(
     (job) =>
@@ -122,6 +131,8 @@ const applicationSchema = z.object({
     .array(z.object({ stage: z.enum(stages), at: z.iso.datetime(), note: text }))
     .min(1)
     .max(30),
+  /** Immutable P1A card copy from submission time; absent when the job had no card. */
+  contributionCard: contributionCardSnapshotSchema.optional(),
 });
 const draftSchema = z.object({
   candidateId: id,
@@ -129,6 +140,7 @@ const draftSchema = z.object({
   notes: text,
   generated: text,
   answer: text,
+  contributionCard: contributionCardInputSchema.optional(),
 });
 export const stateSchema = z
   .object({
@@ -201,7 +213,14 @@ export type Action =
   | { type: "select_person"; id: string | null }
   | { type: "profile"; value: z.infer<typeof profileSchema> }
   | { type: "toggle_saved"; jobId: string }
-  | { type: "draft"; jobId: string; notes: string; generated: string; answer: string }
+  | {
+      type: "draft";
+      jobId: string;
+      notes: string;
+      generated: string;
+      answer: string;
+      contributionCard?: ContributionCardInput;
+    }
   | {
       type: "submit";
       jobId: string;
@@ -209,10 +228,11 @@ export type Action =
       generated: string;
       answer: string;
       consent: boolean;
+      contributionCard?: ContributionCardInput;
     }
   | { type: "stage"; applicationId: string; stage: Stage; note: string }
   | { type: "withdraw"; applicationId: string }
-  | { type: "publish"; job: z.infer<typeof jobSchema> }
+  | { type: "publish"; job: z.input<typeof jobSchema> }
   | { type: "company"; name: string; description: string };
 
 export function initialState(): State {
@@ -298,6 +318,11 @@ export function transition(
     if (!action.consent) fail("Zatwierdź treść i zgodę na przesłanie aplikacji.");
     if (s.applications.some((x) => x.candidateId === p.id && x.jobId === job.id))
       fail("Aplikacja na tę ofertę została już wysłana.");
+    const contributionCard = buildContributionSnapshot(
+      job.category,
+      job.contributionCard,
+      action.contributionCard,
+    );
     s.applications.push(
       applicationSchema.parse({
         id: newId,
@@ -314,6 +339,7 @@ export function transition(
         summary: p.exampleSummary,
         stage: "submitted",
         events: [{ stage: "submitted", at: now, note: "" }],
+        ...(contributionCard ? { contributionCard } : {}),
       }),
     );
     s.drafts = s.drafts.filter((x) => !(x.candidateId === p.id && x.jobId === job.id));

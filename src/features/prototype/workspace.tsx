@@ -16,6 +16,17 @@ import { CvAttachment } from "./cv-attachment";
 import { MatchScore } from "./match-score";
 import { RecruitingApplication } from "./recruiting-application";
 import { CandidateApplication } from "./candidate-application";
+import {
+  answeredContributionCount,
+  contributionCardDraft,
+  isContributionAnswered,
+  type ContributionAnswerInput,
+} from "./contribution-card";
+import {
+  ContributionCardFields,
+  ContributionCardStatusTag,
+  contributionFieldId,
+} from "./contribution-card-view";
 
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -239,6 +250,10 @@ export function ApplyPage() {
   const notes = draft?.notes ?? "";
   const generated = draft?.generated ?? "";
   const [answer, setAnswer] = useState(draft?.answer ?? "");
+  const cardMode = job?.contributionCard ?? "none";
+  const [card, setCard] = useState<ContributionAnswerInput[]>(() =>
+    job ? contributionCardDraft(job.category, draft?.contributionCard) : [],
+  );
   const [consent, setConsent] = useState(false);
   const [message, setMessage] = useState("");
   const [attempted, setAttempted] = useState(false);
@@ -277,11 +292,19 @@ export function ApplyPage() {
       answerInput.current?.focus();
       return;
     }
+    if (cardMode === "required" && answeredContributionCount(card) < card.length) {
+      const first = card.find((item) => !isContributionAnswered(item));
+      if (first) document.getElementById(contributionFieldId(first.id))?.focus();
+      return;
+    }
     if (!consent) {
       document.getElementById("application-consent")?.focus();
       return;
     }
-    if (run({ type: "submit", jobId: job!.id, notes, generated, answer, consent })) {
+    const contributionCard = cardMode === "none" ? undefined : card;
+    if (
+      run({ type: "submit", jobId: job!.id, notes, generated, answer, consent, contributionCard })
+    ) {
       submittedOnce.current = true;
       setSubmitted(true);
       if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -352,6 +375,19 @@ export function ApplyPage() {
                 : `Minimum ${MIN_APPLICATION_ANSWER_LENGTH} znaków. Obecnie: ${answerLength}.`}
             </p>
           </section>
+          {cardMode !== "none" && (
+            <ContributionCardFields
+              mode={cardMode}
+              category={job.category}
+              answers={card}
+              attempted={attempted}
+              disabled={submitted}
+              onChange={(next) => {
+                setCard(next);
+                setConsent(false);
+              }}
+            />
+          )}
           <div className="application-form-section application-submit">
             <label className="application-consent">
               <Checkbox
@@ -361,10 +397,16 @@ export function ApplyPage() {
                 onCheckedChange={(v) => setConsent(v)}
                 aria-invalid={consentInvalid || undefined}
                 aria-describedby={consentInvalid ? "application-consent-error" : undefined}
-                aria-label="Zatwierdzam treść i przesłanie aplikacji"
+                aria-label={
+                  cardMode === "none"
+                    ? "Zatwierdzam treść i przesłanie aplikacji"
+                    : "Zatwierdzam treść aplikacji i karty wkładu oraz ich przesłanie"
+                }
               />
               <span>
-                Zatwierdzam treść aplikacji i przesłanie profilu oraz przykładowego CV pracodawcy.
+                {cardMode === "none"
+                  ? "Zatwierdzam treść aplikacji i przesłanie profilu oraz przykładowego CV pracodawcy."
+                  : "Zatwierdzam treść aplikacji i karty wkładu oraz przesłanie profilu i przykładowego CV pracodawcy."}
               </span>
             </label>
             {consentInvalid && (
@@ -387,7 +429,16 @@ export function ApplyPage() {
                 disabled={submitted}
                 variant="outline"
                 onClick={() => {
-                  if (run({ type: "draft", jobId: job.id, notes, generated, answer }))
+                  if (
+                    run({
+                      type: "draft",
+                      jobId: job.id,
+                      notes,
+                      generated,
+                      answer,
+                      ...(cardMode === "none" ? {} : { contributionCard: card }),
+                    })
+                  )
                     setMessage("Szkic został zapisany.");
                 }}
               >
@@ -451,6 +502,11 @@ export function ApplicationsPage({ employer = false }: { employer?: boolean }) {
                       : state.companies.find((x) => x.id === a.companyId)?.name}
                   </p>
                   <p>{stageLabels[a.stage]}</p>
+                  {employer && (
+                    <p className="mt-3">
+                      <ContributionCardStatusTag card={a.contributionCard} />
+                    </p>
+                  )}
                 </div>
                 <MatchScore score={a.score} />
               </div>

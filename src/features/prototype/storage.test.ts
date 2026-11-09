@@ -62,6 +62,17 @@ describe("browser persistence and recovery", () => {
     expect(() => parseState(JSON.stringify(s))).toThrow("Dotychczasowy stan");
     expect(() => parseState(" ".repeat(MAX_IMPORT_BYTES + 1))).toThrow("za duży");
   });
+  it("loads saves and exports created before the contribution card and exports the new fields", () => {
+    const state = initialState();
+    const legacy = JSON.parse(serializeState(state));
+    for (const job of legacy.jobs) delete job.contributionCard;
+    const storage = memory(JSON.stringify(legacy));
+    const loaded = readState(storage);
+    expect(loaded.blocked).toBe(false);
+    expect(loaded.state).toEqual(state);
+    expect(parseState(JSON.stringify(legacy))).toEqual(state);
+    expect(JSON.parse(serializeState(loaded.state)).jobs[0].contributionCard).toBe("none");
+  });
   it("accepts legacy appearance preferences without changing scenario data", () => {
     const state = initialState();
     for (const theme of ["dark", "system", "light"]) {

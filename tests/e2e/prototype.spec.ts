@@ -995,3 +995,195 @@ test("candidate snapshot supports custom CV and long content at desktop and mobi
     record.answer,
   );
 });
+
+const CARD_JOB_ID = "20000000-0000-4000-8000-000000000004";
+const CARD_JOB_SLUG = "ai-operations-specialist";
+async function publishCardMode(page: Page, mode: "Karta obowiązkowa" | "Karta opcjonalna") {
+  await choose(page, "Karolina Wiśniewska");
+  await page.goto(`/#/app/oferty/${CARD_JOB_ID}`);
+  await expect(page.getByRole("radio", { name: "Bez karty", exact: true })).toBeChecked();
+  await page.getByRole("radio", { name: mode, exact: true }).click();
+  await expect(page.getByRole("radio", { name: mode, exact: true })).toBeChecked();
+  await page.getByRole("checkbox", { name: "Zatwierdzam treść oferty" }).check();
+  await page.getByRole("button", { name: "Opublikuj ofertę", exact: true }).click();
+  await expect(page.getByRole("link", { name: "AI Operations Specialist" })).toBeVisible();
+}
+async function startCardApplication(page: Page) {
+  await choose(page, "Anna Kowalska");
+  await page.goto(`/#/aplikuj/${CARD_JOB_SLUG}`);
+  await page
+    .getByLabel("Dlaczego pasujesz do tej roli?")
+    .fill("Wdrażam automatyzację obsługi zgłoszeń i mierzę jej efekty z zespołem.");
+}
+const cardConsent = (page: Page) =>
+  page.getByRole("checkbox", { name: /Zatwierdzam treść aplikacji i karty wkładu/ });
+
+test("required contribution card blocks gaps, accepts Nie wiem and reaches the recruiter", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await publishCardMode(page, "Karta obowiązkowa");
+  await page.goto(`/#/app/oferty/${CARD_JOB_ID}`);
+  await expect(page.getByRole("radio", { name: "Karta obowiązkowa", exact: true })).toBeChecked();
+  await page.getByText("Podgląd pytań dla roli Apply").click();
+  await expect(page.getByText("Co zmieniło się po wdrożeniu", { exact: false })).toBeVisible();
+
+  await choose(page, "Anna Kowalska");
+  await page.goto(`/#/oferty/${CARD_JOB_SLUG}`);
+  await expect(page.getByText("Ta oferta prosi o kartę wkładu", { exact: false })).toContainText(
+    "obowiązkowa",
+  );
+  await startCardApplication(page);
+  await expect(page.getByText("Odpowiedzi: 0 z 5")).toBeVisible();
+  await page.locator("#contribution-q1").fill("Kategoryzacja zgłoszeń dla 12 konsultantów.");
+  await page
+    .locator("#contribution-q2")
+    .fill("Kategorie i test przygotowuję sama, klasyfikuje model.");
+  await cardConsent(page).check();
+  await page.getByRole("button", { name: "Wyślij aplikację", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Brakuje odpowiedzi na 3 z 5 pytań");
+  await expect(page.locator("#contribution-q3")).toBeFocused();
+  await expect(page.locator("#contribution-q3")).toHaveAttribute("aria-invalid", "true");
+  await expect(page.locator("#contribution-q1")).toHaveValue(
+    "Kategoryzacja zgłoszeń dla 12 konsultantów.",
+  );
+  await page.locator("#contribution-q3").fill("Czas pierwszej odpowiedzi: z 9 do 6 godzin.");
+  await page.locator("#contribution-q4").fill("Tekst roboczy");
+  await page.getByRole("checkbox", { name: "Nie wiem (pytanie 4)" }).check();
+  await expect(page.locator("#contribution-q4")).toBeDisabled();
+  await expect(page.locator("#contribution-q4")).toHaveValue("Tekst roboczy");
+  await page.getByRole("checkbox", { name: "Nie mierzyliśmy (pytanie 5)" }).check();
+  await expect(page.getByText("Odpowiedzi: 5 z 5")).toBeVisible();
+  await expect(cardConsent(page)).not.toBeChecked();
+  await page.getByRole("button", { name: "Zapisz szkic" }).click();
+  await page.reload();
+  await expect(page.getByRole("checkbox", { name: "Nie wiem (pytanie 4)" })).toBeChecked();
+  await expect(page.locator("#contribution-q4")).toHaveValue("Tekst roboczy");
+  await expect(page.locator("#contribution-q2")).toHaveValue(
+    "Kategorie i test przygotowuję sama, klasyfikuje model.",
+  );
+  await cardConsent(page).check();
+  await page.getByRole("button", { name: "Wyślij aplikację", exact: true }).click();
+  await expect(page.getByText("Aplikacja została wysłana.", { exact: false })).toBeVisible();
+  const stored = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key)!).applications.at(-1).contributionCard,
+    STORAGE_KEY,
+  );
+  expect(stored).toMatchObject({ mode: "required", category: "apply" });
+  expect(stored.answers.map((a: { kind: string }) => a.kind)).toEqual([
+    "text",
+    "text",
+    "text",
+    "dont_know",
+    "not_measured",
+  ]);
+
+  await choose(page, "Karolina Wiśniewska");
+  await page.getByRole("link", { name: "Kandydaci", exact: true }).click();
+  await expect(page.getByText("Karta wypełniona", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Anna Kowalska", exact: true }).click();
+  await page.getByRole("tab", { name: "Karta wkładu" }).click();
+  const panel = page.getByRole("tabpanel", { name: "Karta wkładu" });
+  await expect(panel.getByText("Jak czytać kartę")).toBeVisible();
+  await expect(panel.getByText("Przykłady dla roli Apply")).toBeVisible();
+  await expect(panel.locator(".contribution-mark", { hasText: "Nie wiem" })).toBeVisible();
+  await expect(panel.locator(".contribution-mark", { hasText: "Nie mierzyliśmy" })).toBeVisible();
+  await expect(panel).toContainText("Karta obowiązkowa w chwili wysłania");
+  await expect(panel).not.toContainText("Tekst roboczy");
+  await page.reload();
+  await page.getByRole("tab", { name: "Karta wkładu" }).click();
+  await expect(
+    page.getByRole("tabpanel", { name: "Karta wkładu" }).getByText("Kategoryzacja zgłoszeń"),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("skipped optional contribution card is visible as such to the recruiter", async ({ page }) => {
+  await publishCardMode(page, "Karta opcjonalna");
+  await startCardApplication(page);
+  await expect(page.getByText("możesz ją pominąć", { exact: false })).toBeVisible();
+  await cardConsent(page).check();
+  await page.getByRole("button", { name: "Wyślij aplikację", exact: true }).click();
+  await expect(page.getByText("Aplikacja została wysłana.", { exact: false })).toBeVisible();
+  await choose(page, "Karolina Wiśniewska");
+  await page.goto("/#/app/kandydaci");
+  await expect(page.getByText("Karta pominięta", { exact: true })).toBeVisible();
+  await expect(page.getByText("Bez karty", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Anna Kowalska", exact: true }).click();
+  await page.getByRole("tab", { name: "Karta wkładu" }).click();
+  const panel = page.getByRole("tabpanel", { name: "Karta wkładu" });
+  await expect(panel).toContainText("Kandydat pominął kartę wkładu (karta była opcjonalna).");
+  await expect(panel.getByRole("listitem")).toHaveCount(0);
+});
+
+test("candidate sees the submitted card copy without the recruiter guide", async ({ page }) => {
+  await publishCardMode(page, "Karta opcjonalna");
+  await startCardApplication(page);
+  await page.locator("#contribution-q1").fill("Projekt dla działu obsługi klienta.");
+  await cardConsent(page).check();
+  await page.getByRole("button", { name: "Wyślij aplikację", exact: true }).click();
+  await expect(page.getByText("Aplikacja została wysłana.", { exact: false })).toBeVisible();
+  await page.getByRole("link", { name: "AI Operations Specialist", exact: true }).click();
+  await page.getByRole("tab", { name: "Karta wkładu" }).click();
+  const panel = page.getByRole("tabpanel", { name: "Karta wkładu" });
+  await expect(panel.getByText("Projekt dla działu obsługi klienta.")).toBeVisible();
+  await expect(panel.getByText("Bez odpowiedzi").first()).toBeVisible();
+  await expect(page.getByText("Jak czytać kartę")).toHaveCount(0);
+  await expect(page.locator("main")).not.toContainText("Oceniasz, czy odpowiedź jest konkretna");
+});
+
+test("a save created before the contribution card loads without errors", async ({ page }) => {
+  const legacy = JSON.parse(JSON.stringify(initialState()));
+  for (const job of legacy.jobs) delete job.contributionCard;
+  legacy.activePersonId = "employer-brightlabs";
+  await page.goto("/");
+  await page.evaluate(
+    ([key, value]) => localStorage.setItem(key, value),
+    [STORAGE_KEY, JSON.stringify(legacy)],
+  );
+  await page.goto("/#/app/kandydaci");
+  await page.reload();
+  await expect(page.getByText("Nie udało się odczytać zapisu", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("Bez karty", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Marek Nowak", exact: true }).click();
+  await expect(page.getByRole("tab")).toHaveCount(2);
+  await page.goto(`/#/app/oferty/${CARD_JOB_ID}`);
+  await expect(page.getByRole("radio", { name: "Bez karty", exact: true })).toBeChecked();
+});
+
+for (const width of [1280, 390]) {
+  test(`contribution card screens have no serious accessibility violations at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const scan = async () => {
+      const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+      expect(results.violations).toEqual([]);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+    };
+    await publishCardMode(page, "Karta obowiązkowa");
+    await page.goto(`/#/app/oferty/${CARD_JOB_ID}`);
+    await page.getByText("Podgląd pytań dla roli Apply").click();
+    await scan();
+    await startCardApplication(page);
+    await page.locator("#contribution-q1").fill("x".repeat(2000));
+    await page.getByRole("button", { name: "Wyślij aplikację", exact: true }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "Karta wkładu" })).toBeVisible();
+    await scan();
+    for (const n of [2, 3, 4, 5])
+      await page.getByRole("checkbox", { name: `Nie wiem (pytanie ${n})` }).check();
+    await cardConsent(page).check();
+    await page.getByRole("button", { name: "Wyślij aplikację", exact: true }).click();
+    await expect(page.getByText("Aplikacja została wysłana.", { exact: false })).toBeVisible();
+    await choose(page, "Karolina Wiśniewska");
+    await page.goto("/#/app/kandydaci");
+    await scan();
+    await page.getByRole("link", { name: "Anna Kowalska", exact: true }).click();
+    await page.getByRole("tab", { name: "Karta wkładu" }).click();
+    await expect(page.getByText("Jak czytać kartę")).toBeVisible();
+    await scan();
+  });
+}

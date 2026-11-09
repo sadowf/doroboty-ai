@@ -21,6 +21,12 @@ This is the receiving application's component map, checked against the implement
 
 Do not create another job card, score badge, return link or file-row family for a new route. Reuse the composition and document genuinely missing semantics before adding a variant.
 
+## Contribution card (P1A host extension)
+
+Owners: [contribution-card.ts](../../src/features/prototype/contribution-card.ts) (wording, guide, shared Zod schemas), [contribution-card-view.tsx](../../src/features/prototype/contribution-card-view.tsx) (`ContributionModeField`, `ContributionCardFields`, `ContributionCardRecord`, `ContributionCardStatusTag`), [RadioGroup/Radio](../../src/components/ui/radio-group.tsx) (Base UI radio primitive, C04-style round control). Styles: editor/form in [application.css](../../src/app/application.css), reading tab and list marker in [records.css](../../src/app/records.css), offer note in [marketplace.css](../../src/app/marketplace.css).
+
+The card reading view is a third RecordSheet section only when the application has a card snapshot. “Nie wiem” / “Nie mierzyliśmy” and the list status are noninteractive outlined C07-style facts with text, never colour alone. The employer guide is a native disclosure (open by default) before the answers; the candidate audience never renders it. These are documented host compositions, not observed v1 kit variants.
+
 ## BackLink
 
 ```tsx

@@ -4,6 +4,7 @@ import { ProcessTimeline } from "@/components/process-timeline";
 import { RecordSheet } from "@/components/record-sheet";
 import { CvAttachment } from "./cv-attachment";
 import { MatchScore } from "./match-score";
+import { ContributionCardRecord } from "./contribution-card-view";
 import { stageLabels, type Application, type Stage } from "./model";
 
 type RecordEvent = { stage: Stage; at: string; note?: string };
@@ -24,7 +25,15 @@ export function ApplicationRecord({
 }: {
   application: Pick<
     Application,
-    "candidateId" | "candidateName" | "jobTitle" | "stage" | "answer" | "cv" | "score" | "summary"
+    | "candidateId"
+    | "candidateName"
+    | "jobTitle"
+    | "stage"
+    | "answer"
+    | "cv"
+    | "score"
+    | "summary"
+    | "contributionCard"
   >;
   companyName: string;
   audience: "candidate" | "employer";
@@ -93,6 +102,21 @@ export function ApplicationRecord({
                 </>
               ),
             },
+            // P1A: applications without a card keep the original two tabs.
+            ...(application.contributionCard
+              ? [
+                  {
+                    value: "contribution",
+                    label: "Karta wkładu",
+                    content: (
+                      <ContributionCardRecord
+                        card={application.contributionCard}
+                        audience={audience}
+                      />
+                    ),
+                  },
+                ]
+              : []),
           ]}
           footer={footer}
         >

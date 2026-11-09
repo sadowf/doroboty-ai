@@ -164,6 +164,9 @@ footer {
   border-radius: 5px;
   box-shadow: var(--gui-edge-shadow);
 }
+[data-slot="radio"] {
+  box-shadow: var(--gui-edge-shadow);
+}
 [data-slot="badge"] {
   box-shadow: inset 0 0 0 1px #d8d5d1;
   white-space: normal;
