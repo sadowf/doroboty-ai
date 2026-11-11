@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { initialState } from "./model";
 import {
+  clearSave,
+  isScenarioStorageEvent,
   MAX_IMPORT_BYTES,
   parseState,
+  readRawSave,
   readState,
   saveState,
   serializeState,
@@ -14,6 +17,9 @@ function memory(raw: string | null = null) {
     getItem: (key: string) => values.get(key) ?? null,
     setItem: (key: string, value: string) => {
       values.set(key, value);
+    },
+    removeItem: (key: string) => {
+      values.delete(key);
     },
   };
 }
@@ -78,5 +84,27 @@ describe("browser persistence and recovery", () => {
     for (const theme of ["dark", "system", "light"]) {
       expect(parseState(JSON.stringify({ ...state, theme }))).toEqual(state);
     }
+  });
+  it("recognises scenario changes made in another tab", () => {
+    expect(isScenarioStorageEvent(STORAGE_KEY)).toBe(true);
+    expect(isScenarioStorageEvent(null)).toBe(true);
+    expect(isScenarioStorageEvent("unrelated.key")).toBe(false);
+  });
+  it("reads and clears the raw save for emergency recovery without throwing", () => {
+    const storage = memory("{broken");
+    expect(readRawSave(storage)).toBe("{broken");
+    expect(clearSave(storage)).toBe(true);
+    expect(readRawSave(storage)).toBeNull();
+    expect(readState(storage).blocked).toBe(false);
+    const denied = {
+      getItem: () => {
+        throw new Error("denied");
+      },
+      setItem: () => undefined,
+    };
+    expect(readRawSave(denied)).toBeNull();
+    expect(readRawSave(null)).toBeNull();
+    expect(clearSave(denied)).toBe(false);
+    expect(clearSave(null)).toBe(false);
   });
 });

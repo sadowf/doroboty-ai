@@ -1,0 +1,13 @@
+# Keep committed text files byte-identical on every OS. Formatting, design-system
+# hash checks and packet verification compare LF bytes; Windows checkouts with
+# core.autocrlf=true would otherwise turn them into CRLF and fail locally.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

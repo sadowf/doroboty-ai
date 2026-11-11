@@ -23,7 +23,7 @@ Karolina and Tomasz see their respective companies in the interface; this is rol
 
 ## Save, share and recover
 
-Changes survive reload in this browser. Settings can export a JSON file, import a scenario or reset to fixtures. Import/reset asks before replacing state. If a save is incompatible, download the original before resetting. Storage failure is shown explicitly; export before closing the tab. Use one editing tab at a time.
+Changes survive reload in this browser. Settings can export a JSON file, import a scenario or reset to fixtures. Import/reset asks before replacing state. If a save is incompatible, download the original before resetting. Storage failure is shown explicitly; export before closing the tab. Use one editing tab at a time; if another tab saved changes, choose “Wczytaj aktualne dane” before continuing. If a screen shows “Coś poszło nie tak”, reload first; if it repeats, download the data copy and restore the starting data from that screen. If the published site is unavailable, run the app locally as in Start and move data with export/import.
 
 A URL shares the interface, not your local changes. To transfer a scenario, share the exported file and import it in the other browser. Exports include all personas, applications and notes; never enter real personal data.
 

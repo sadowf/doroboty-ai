@@ -18,6 +18,7 @@ import { BrandMark } from "@/features/public/brand-mark";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { currentPerson } from "./model";
 import { usePrototype } from "./store";
+import { ErrorBoundary } from "./error-boundary";
 import { cn } from "@/lib/utils";
 const navigation = [
   { to: "/oferty", label: "Oferty" },
@@ -67,7 +68,7 @@ const employerNav = [
   ["/app/organizacja", "Organizacja", Building2],
 ] as const;
 export function Shell() {
-  const { state, issue, error, clearError } = usePrototype();
+  const { state, issue, error, clearError, outdated, reloadFromStorage } = usePrototype();
   const person = currentPerson(state);
   const { pathname } = useLocation();
   const workspace = pathname.startsWith("/app") && person;
@@ -91,6 +92,17 @@ export function Shell() {
   const content = (
     <>
       <>
+        {outdated && (
+          <Notice>
+            <span className="block">
+              Dane scenariusza zmieniono w innej karcie przeglądarki. Ta karta pokazuje starszą
+              wersję i nie zapisze zmian, dopóki nie wczytasz aktualnych danych.
+            </span>
+            <Button className="mt-3" size="sm" onClick={reloadFromStorage}>
+              Wczytaj aktualne dane
+            </Button>
+          </Notice>
+        )}
         {issue && (
           <Notice>
             {issue}{" "}
@@ -106,7 +118,9 @@ export function Shell() {
         </p>
       )}
       <div key={`${state.activePersonId}:${pathname}`}>
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </div>
     </>
   );
