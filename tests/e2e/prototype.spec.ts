@@ -1256,3 +1256,49 @@ test("a render error shows recovery actions instead of a blank page without logg
   expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
   expect(logs.join("\n")).not.toContain("Prywatna treść testowa");
 });
+
+test("built page enforces its security policy without breaking core flows and shows its version", async ({
+  page,
+}) => {
+  const violations: string[] = [];
+  page.on("console", (message) => {
+    if (message.text().includes("Content Security Policy")) violations.push(message.text());
+  });
+  await page.goto("/#/oferty");
+  await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveAttribute(
+    "content",
+    /script-src 'self';.*object-src 'none'/,
+  );
+  await expect(page.locator('meta[name="referrer"]')).toHaveAttribute("content", "no-referrer");
+  expect(
+    await page.evaluate(() => {
+      const script = document.createElement("script");
+      script.textContent = "window.inlineScriptRan = true";
+      document.head.append(script);
+      script.remove();
+      return (window as Window & { inlineScriptRan?: boolean }).inlineScriptRan ?? false;
+    }),
+  ).toBe(false);
+  await expect.poll(() => violations.length).toBe(1);
+  violations.length = 0;
+
+  await page.goto("/#/oferty/ai-product-manager");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await application(page);
+  await page.goto("/#/app/aplikacje");
+  await page.locator('a[href^="#/app/aplikacje/"]').first().click();
+  await page.getByRole("tab", { name: "CV", exact: true }).click();
+  await expect(page.getByTitle("Podgląd CV (PDF)")).toBeVisible();
+
+  await choose(page, "Karolina Wiśniewska");
+  await page.goto("/#/app/oferty/nowa");
+  await page.getByRole("combobox", { name: "Kategoria" }).click();
+  await expect(page.getByRole("option", { name: "Lead" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await page.goto("/#/app/settings");
+  await expect(
+    page.getByText(/Wersja aplikacji: [0-9a-f]{7} \(zbudowano \d{4}-\d{2}-\d{2}\)/),
+  ).toBeVisible();
+  expect(violations).toEqual([]);
+});

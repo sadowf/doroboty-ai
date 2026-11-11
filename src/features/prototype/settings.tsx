@@ -5,6 +5,7 @@ import { usePrototype } from "./store";
 import { serializeState, MAX_IMPORT_BYTES } from "./storage";
 import { PageTitle } from "./shell";
 import { downloadText } from "./download";
+import { buildLabel } from "./build-info";
 
 export function SettingsPage() {
   const { state, reset, importState, original } = usePrototype();
@@ -90,6 +91,7 @@ export function SettingsPage() {
           Wybór osoby zastępuje logowanie. Propozycje AI, Match Score i podsumowania odtwarzają
           przygotowany scenariusz; nie oceniają kompetencji. Używaj przykładowych danych i CV.
         </p>
+        <p>Wersja aplikacji: {buildLabel()}. Podaj ją, gdy zgłaszasz problem prowadzącemu kursu.</p>
       </section>
       <ConfirmDialog
         open={pending !== null}

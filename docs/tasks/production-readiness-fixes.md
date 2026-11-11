@@ -34,7 +34,7 @@ Affected surfaces: shell notice area (all routes) and a new host fallback screen
 - [x] A change in another tab shows a notice; edits in the stale tab are refused with an error; "Wczytaj aktualne dane" loads the other tab's state and clears the notice; nothing is written by the stale tab before that.
 - [x] `docs/RELEASE.md` covers build, publish, smoke check, rollback and outage steps for Netlify and GitHub Pages.
 - [x] Unit/e2e regressions added; FEATURES.md updated (SYS-09, SYS-10, new SYS-12).
-- [ ] `./scripts/verify` passes — see Handoff Notes for what actually ran.
+- [x] `./scripts/verify` passes — in GitHub Actions CI on Node 24 for PR #2 (see Handoff Notes).
 
 ## Files / Areas
 
@@ -61,4 +61,6 @@ Verification on 2026-11-11 (Windows, Node v25.9.0, tools run directly through `n
 | Playwright journeys incl. 2 new tests            | **not run**: no Playwright Chromium on this machine; GitHub CI (Node 24) runs only for pull requests/`main`                                                                                                                                                                                               |
 | Manual browser check on built app (vite preview) | two-tab notice/refusal/in-place reload; fallback on forced render error at 1024px and 375px (no overflow), keyboard focus for reset confirm/cancel, retry after navigation, download enabled, reset clears save; console shows only `Render error (Error)` + stack; main journey Anna → Karolina → reload |
 
-`./scripts/verify` as a whole has therefore **not** passed on a representative environment yet; the next step is a CI run on a pull request.
+`./scripts/verify` as a whole had therefore not passed locally on a representative environment.
+
+CI on 2026-11-11 for [PR #2](https://github.com/sadowf/doroboty-ai/pull/2), merge commit `1e63265` (same content as the assessed sources), [job 130653107385](https://github.com/sadowf/doroboty-ai/actions/runs/43058161659/job/130653107385), ubuntu-26.04, Node v24.22.2: `./scripts/verify` passed — Prettier, kit (67 files) and agent-kit examples (6 tests), ESLint, tsc, Vitest 46/46, participant packet, build and Playwright 42/42 without retries, including both new journeys. One annotation (`actions/upload-artifact@v4` on deprecated Node 20) was addressed in [github-pages-release](github-pages-release.md).

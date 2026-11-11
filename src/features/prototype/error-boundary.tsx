@@ -2,6 +2,7 @@ import { Component, useEffect, useRef, useState, type ErrorInfo, type ReactNode 
 import { Button } from "@/components/ui/button";
 import { clearSave, readRawSave, type StoragePort } from "./storage";
 import { downloadText } from "./download";
+import { buildLabel } from "./build-info";
 
 function browserStorage(): StoragePort | null {
   try {
@@ -100,6 +101,7 @@ export function ErrorFallback() {
           kliknięcie. Nie przesyłaj danych osobowych ani pliku z danymi, jeśli zawiera prawdziwe
           informacje.
         </p>
+        <p>Wersja aplikacji: {buildLabel()}</p>
       </div>
     </section>
   );
