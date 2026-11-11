@@ -1,6 +1,14 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { initialState, transition, type Action, type State } from "./model";
-import { parseState, readState, saveState, type StoragePort } from "./storage";
+import {
+  isScenarioStorageEvent,
+  parseState,
+  readState,
+  saveState,
+  type StoragePort,
+} from "./storage";
+const OUTDATED_ERROR =
+  "Dane zmieniono w innej karcie. Wczytaj aktualne dane, zanim wprowadzisz kolejne zmiany.";
 function browserStorage(): StoragePort | null {
   try {
     return window.localStorage;
@@ -14,21 +22,48 @@ function useStore() {
   const [issue, setIssue] = useState(loaded.issue);
   const [error, setError] = useState("");
   const [blocked, setBlocked] = useState(loaded.blocked);
+  const [original, setOriginal] = useState(loaded.original);
+  // Another tab saved the scenario: this tab's copy is stale and must not overwrite it.
+  const [outdated, setOutdated] = useState(false);
   const latest = useRef(state);
+  useEffect(() => {
+    function onStorage(event: StorageEvent) {
+      if (isScenarioStorageEvent(event.key)) setOutdated(true);
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
   function commit(next: State, replace = false) {
     latest.current = next;
     setState(next);
     setError("");
-    if (blocked && !replace) return;
+    if ((blocked || outdated) && !replace) return;
     try {
       saveState(browserStorage(), next);
       setIssue("");
-      if (replace) setBlocked(false);
+      if (replace) {
+        setBlocked(false);
+        setOutdated(false);
+      }
     } catch (e) {
       setIssue((e as Error).message);
     }
   }
+  function reloadFromStorage() {
+    const current = readState(browserStorage());
+    latest.current = current.state;
+    setState(current.state);
+    setIssue(current.issue);
+    setBlocked(current.blocked);
+    setOriginal(current.original);
+    setError("");
+    setOutdated(false);
+  }
   function run(action: Action) {
+    if (outdated) {
+      setError(OUTDATED_ERROR);
+      return false;
+    }
     try {
       commit(transition(latest.current, action));
       return true;
@@ -59,9 +94,11 @@ function useStore() {
     issue,
     error,
     blocked,
-    original: loaded.original,
+    outdated,
+    original,
     run,
     importState,
+    reloadFromStorage,
     clearError: () => setError(""),
     reset: () => commit(initialState(), true),
   };

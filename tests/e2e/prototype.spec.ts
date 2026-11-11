@@ -1187,3 +1187,72 @@ for (const width of [1280, 390]) {
     await scan();
   });
 }
+
+test("a change in another tab blocks stale edits until current data is loaded", async ({
+  page,
+  context,
+}) => {
+  await choose(page, "Anna Kowalska");
+  await page.goto("/#/app/profil");
+  const other = await context.newPage();
+  await other.goto("/#/app/profil");
+  await other.getByLabel("Imię i nazwisko").fill("Anna z drugiej karty");
+  await other.getByRole("button", { name: "Zapisz profil", exact: true }).click();
+  const notice = page.getByText("Dane scenariusza zmieniono w innej karcie przeglądarki.");
+  await expect(notice).toBeVisible();
+  await page.getByLabel("Imię i nazwisko").fill("Anna ze starej karty");
+  await page.getByRole("button", { name: "Zapisz profil", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Dane zmieniono w innej karcie");
+  const saved = await page.evaluate((key) => localStorage.getItem(key) ?? "", STORAGE_KEY);
+  expect(saved).toContain("Anna z drugiej karty");
+  expect(saved).not.toContain("Anna ze starej karty");
+  await page.getByRole("button", { name: "Wczytaj aktualne dane", exact: true }).click();
+  await expect(notice).toHaveCount(0);
+  await page.goto("/#/app");
+  await expect(page.locator(".workspace-label strong")).toHaveText("Anna z drugiej karty");
+  await other.close();
+});
+
+test("a render error shows recovery actions instead of a blank page without logging its message", async ({
+  page,
+}) => {
+  const logs: string[] = [];
+  page.on("console", (message) => logs.push(message.text()));
+  await page.addInitScript(() => {
+    const descriptor = Object.getOwnPropertyDescriptor(Intl.DateTimeFormat.prototype, "format")!;
+    Object.defineProperty(Intl.DateTimeFormat.prototype, "format", {
+      configurable: true,
+      get() {
+        if ((window as unknown as { failDates?: boolean }).failDates)
+          throw new Error("Prywatna treść testowa");
+        return descriptor.get!.call(this);
+      },
+    });
+  });
+  await choose(page, "Anna Kowalska");
+  await page.goto("/#/metodologia");
+  await page.evaluate(() => ((window as unknown as { failDates?: boolean }).failDates = true));
+  await page.getByRole("link", { name: "Oferty", exact: true }).first().click();
+  await expect(page.getByRole("heading", { name: "Coś poszło nie tak" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Metodologia", exact: true }).first()).toBeVisible();
+  const downloaded = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Pobierz kopię danych", exact: true }).click();
+  expect((await downloaded).suggestedFilename()).toBe("doroboty-kopia-danych.json");
+  await page.getByRole("button", { name: "Przywróć dane startowe…" }).click();
+  await expect(
+    page.getByRole("button", { name: "Tak, przywróć dane startowe", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Przywróć dane startowe…" })).toBeFocused();
+  await page.evaluate(() => ((window as unknown as { failDates?: boolean }).failDates = false));
+  await page.getByRole("link", { name: "Metodologia", exact: true }).first().click();
+  await expect(page.getByRole("heading", { name: "Coś poszło nie tak" })).toHaveCount(0);
+  await page.evaluate(() => ((window as unknown as { failDates?: boolean }).failDates = true));
+  await page.getByRole("link", { name: "Oferty", exact: true }).first().click();
+  await page.getByRole("button", { name: "Przywróć dane startowe…" }).click();
+  await page.getByRole("button", { name: "Tak, przywróć dane startowe", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Coś poszło nie tak" })).toHaveCount(0);
+  expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
+  expect(logs.join("\n")).not.toContain("Prywatna treść testowa");
+});

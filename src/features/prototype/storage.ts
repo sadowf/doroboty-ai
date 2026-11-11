@@ -4,6 +4,29 @@ export const MAX_IMPORT_BYTES = 2_000_000;
 export interface StoragePort {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
+  removeItem?(key: string): void;
+}
+/** A `storage` event from another tab concerns the scenario (null means storage.clear()). */
+export function isScenarioStorageEvent(key: string | null) {
+  return key === null || key === STORAGE_KEY;
+}
+/** Raw saved scenario for emergency download; never throws. */
+export function readRawSave(storage: StoragePort | null) {
+  try {
+    return storage?.getItem(STORAGE_KEY) ?? null;
+  } catch {
+    return null;
+  }
+}
+/** Removes the saved scenario so the next start uses fixtures; returns false if storage is unavailable. */
+export function clearSave(storage: StoragePort | null) {
+  try {
+    if (!storage?.removeItem) return false;
+    storage.removeItem(STORAGE_KEY);
+    return true;
+  } catch {
+    return false;
+  }
 }
 export function parseState(raw: string): State {
   if (new TextEncoder().encode(raw).length > MAX_IMPORT_BYTES)

@@ -60,6 +60,10 @@ The portal renders 30 deterministic particles in the existing pink/yellow/ink pa
 
 The application owns success semantics: run the existing submit operation first, guard against repeats, show “Wysłano!” and disable editing/actions briefly, then redirect after 900ms. One live status region carries draft/success messages; animation is never the only confirmation. Errors, draft saves and existing-record visits do not celebrate. The owner skips decoration and delay with reduced motion; CSS also hides an active burst if that preference changes. Clear the redirect timer when leaving the page. Do not attach this behavior to generic Button clicks, infer persistence success beyond the local operation, or add a remote asset/dependency.
 
+## Error fallback and stale-tab notice (host recovery states)
+
+[ErrorBoundary/ErrorFallback](../../src/features/prototype/error-boundary.tsx) replaces a blank page after an unexpected render error. It composes existing recipes only: `prototype-section` with a Geist Serif H1 and body text (as in NotFound/PrivacyPage), default/outline/ghost/destructive `Button` actions and an inline `prototype-notice` confirmation for reset (focus moves to the confirm action and returns to the trigger on cancel). The shell wraps each route in its own boundary keyed by person and path, so navigation keeps working and leaving the route retries; a top-level boundary covers shell/provider failures. The stale-tab state in the shell reuses `Notice` with a small default `Button` ("Wczytaj aktualne dane"). Neither is a v1 kit screen; no new color, type or surface family.
+
 ## Style ownership
 
 | Owner                                                | Scope                                                                         |
