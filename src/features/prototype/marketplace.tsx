@@ -25,6 +25,7 @@ import type { JobWithCompany } from "@/features/jobs/types";
 import { usePrototype } from "./store";
 import { currentPerson, publishedJobs } from "./model";
 import { NotFound } from "./shell";
+import { contributionOfferNote } from "./contribution-card-view";
 import { cn } from "@/lib/utils";
 
 function LocalMap({ jobs }: { jobs: JobWithCompany[] }) {
@@ -349,6 +350,7 @@ export function JobPage() {
   const submitted = state.applications.find(
     (x) => x.candidateId === person?.id && x.jobId === job.id,
   );
+  const cardNote = contributionOfferNote(job.contributionCard);
   const related = publishedJobs(state)
     .filter((x) => x.id !== job.id)
     .sort((a, b) => Number(b.category === job.category) - Number(a.category === job.category))
@@ -416,6 +418,7 @@ export function JobPage() {
                 </div>
               ))}
             </dl>
+            {cardNote && <p className="pp-offer-card-note">{cardNote}</p>}
             <div className="pp-offer-actions">
               {person?.role === "candidate" ? (
                 <>

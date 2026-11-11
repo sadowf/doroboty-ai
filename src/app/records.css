@@ -8,7 +8,8 @@
 }
 .record-tabs {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 0 16px;
   border-bottom: 1px solid #d8d5d1;
   margin-bottom: 22px;
 }
@@ -336,4 +337,68 @@
   border: 1px solid var(--gui-edge);
   border-radius: 10px;
   background: var(--gui-canvas);
+}
+
+/* P1A contribution card reading tab and list marker (host extension). */
+.contribution-record-meta {
+  margin: -8px 0 20px;
+}
+.contribution-guide {
+  margin-bottom: 24px;
+  padding: 0 18px;
+  border: 1px solid var(--gui-text);
+  border-radius: 18px;
+  background: var(--pp-paper);
+}
+.contribution-guide-body {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 18px;
+}
+.record-reading .contribution-guide-body p {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.contribution-guide-body h4,
+.contribution-answers h4 {
+  font-family: var(--pp-font);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.contribution-answers {
+  display: grid;
+  gap: 22px;
+}
+.contribution-answers > li {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding-top: 18px;
+  border-top: 1px solid #d8d5d1;
+}
+.contribution-answers > li:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.contribution-mark,
+.contribution-status {
+  display: inline-block;
+  padding: 2px 12px;
+  border: 1px solid var(--gui-text);
+  border-radius: 999px;
+  background: var(--pp-paper);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: normal;
+}
+.record-reading p.contribution-empty {
+  font-style: italic;
+  color: var(--gui-text-muted);
+}
+.contribution-status {
+  font-size: 12px;
+  font-weight: 400;
 }

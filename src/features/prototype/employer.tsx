@@ -12,7 +12,10 @@ import {
   seniorityLabels,
   contractLabels,
 } from "@/features/jobs/presentation";
+import type { JobCategory } from "@/features/jobs/types";
 import { currentPerson, jobSchema } from "./model";
+import type { ContributionCardMode } from "./contribution-card";
+import { ContributionModeField } from "./contribution-card-view";
 import { usePrototype } from "./store";
 import { Field } from "./workspace";
 import { Empty, NotFound, PageTitle } from "./shell";
@@ -76,6 +79,10 @@ export function EmployerJobEditor() {
   const [description, setDescription] = useState(existing?.description ?? "");
   const [source, setSource] = useState(existing?.sourceBrief ?? "");
   const [generated, setGenerated] = useState(existing?.generatedDescription ?? "");
+  const [category, setCategory] = useState<JobCategory>(existing?.category ?? "build");
+  const [cardMode, setCardMode] = useState<ContributionCardMode>(
+    existing?.contributionCard ?? "none",
+  );
   const [approved, setApproved] = useState(false);
   const [error, setError] = useState("");
   if (id !== "nowa" && !existing) return <NotFound />;
@@ -97,7 +104,8 @@ export function EmployerJobEditor() {
       description,
       sourceBrief: source,
       generatedDescription: generated,
-      category: data.get("category"),
+      category,
+      contributionCard: cardMode,
       function: data.get("function"),
       remoteStatus: data.get("remoteStatus"),
       locations: [String(data.get("location")).trim()],
@@ -219,9 +227,28 @@ export function EmployerJobEditor() {
           />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Kategoria">
+            <FormSelect
+              name="category"
+              ariaLabel="Kategoria"
+              value={category}
+              onValueChange={(value) => {
+                setCategory(value as JobCategory);
+                setApproved(false);
+              }}
+              options={Object.entries(categoryLabels).map(([value, label]) => ({ value, label }))}
+            />
+          </Field>
+          <ContributionModeField
+            mode={cardMode}
+            category={category}
+            onModeChange={(mode) => {
+              setCardMode(mode);
+              setApproved(false);
+            }}
+          />
           {(
             [
-              ["category", "Kategoria", categoryLabels, existing?.category ?? "build"],
               ["function", "Funkcja", functionLabels, existing?.function ?? "engineering"],
               ["remoteStatus", "Tryb pracy", remoteLabels, existing?.remoteStatus ?? "hybrid"],
               ["seniority", "Poziom", seniorityLabels, existing?.seniority ?? "mid"],

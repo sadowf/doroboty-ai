@@ -139,3 +139,93 @@ describe("coherent browser scenario", () => {
     ).toThrow();
   });
 });
+
+describe("contribution card (P1A)", () => {
+  const answers = (kind: "text" | "dont_know" = "text") =>
+    (["q1", "q2", "q3", "q4", "q5"] as const).map((id) => ({
+      id,
+      kind: id === "q4" ? kind : ("text" as const),
+      text: `Konkretna odpowiedź ${id}`,
+    }));
+  function withMode(mode: "none" | "optional" | "required") {
+    const employer = as(initialState(), "employer-brightlabs");
+    const published = transition(employer, {
+      type: "publish",
+      job: { ...employer.jobs[0], contributionCard: mode },
+    });
+    return as(published, "candidate-anna");
+  }
+  const submit = (s: State, contributionCard?: ReturnType<typeof answers>) =>
+    transition(
+      s,
+      {
+        type: "submit",
+        jobId: s.jobs[0].id,
+        notes: "",
+        generated: "",
+        answer: "Approved application with sufficient context.",
+        consent: true,
+        contributionCard,
+      },
+      time,
+      "application-anna",
+    );
+
+  it("defaults fixtures and older jobs to no card and stores no card for them", () => {
+    expect(initialState().jobs.every((job) => job.contributionCard === "none")).toBe(true);
+    const s = submit(withMode("none"), answers());
+    expect(s.applications.at(-1)?.contributionCard).toBeUndefined();
+  });
+  it("enforces a required card in the domain, accepting 'Nie wiem'", () => {
+    const s = withMode("required");
+    expect(() => submit(s)).toThrow("Karta wkładu jest obowiązkowa");
+    expect(() => submit(s, answers().slice(0, 4))).toThrow("1 z 5");
+    const card = submit(s, answers("dont_know")).applications.at(-1)?.contributionCard;
+    expect(card).toMatchObject({ mode: "required", category: "lead" });
+    expect(card?.answers[3]).toMatchObject({ kind: "dont_know", text: "" });
+  });
+  it("lets the candidate skip an optional card", () => {
+    const card = submit(withMode("optional")).applications.at(-1)?.contributionCard;
+    expect(card?.answers.every((a) => a.kind === "empty")).toBe(true);
+  });
+  it("rejects 'Nie mierzyliśmy' on a question that does not allow it", () => {
+    const wrong = answers().map((a) =>
+      a.id === "q1" ? { ...a, kind: "not_measured" as never } : a,
+    );
+    expect(() => submit(withMode("optional"), wrong)).toThrow("nie pasują");
+  });
+  it("keeps the submitted card unchanged after the job mode or category changes", () => {
+    const s = submit(withMode("required"), answers());
+    const before = s.applications.at(-1)!;
+    const employer = as(s, "employer-brightlabs");
+    const changed = transition(employer, {
+      type: "publish",
+      job: { ...employer.jobs[0], contributionCard: "none", category: "build" },
+    });
+    expect(changed.applications.at(-1)).toEqual(before);
+    expect(before.contributionCard?.answers[0].question).toContain("inicjatywę");
+  });
+  it("saves card answers in the draft and removes the draft on submission", () => {
+    let s = withMode("required");
+    s = transition(s, {
+      type: "draft",
+      jobId: s.jobs[0].id,
+      notes: "",
+      generated: "",
+      answer: "Draft",
+      contributionCard: [{ id: "q2", kind: "dont_know", text: "Zachowany tekst" }],
+    });
+    expect(s.drafts.at(-1)?.contributionCard).toEqual([
+      { id: "q2", kind: "dont_know", text: "Zachowany tekst" },
+    ]);
+    expect(submit(s, answers()).drafts).toHaveLength(0);
+  });
+  it("parses an older saved state without any card fields", () => {
+    const old = JSON.parse(JSON.stringify(submit(withMode("required"), answers())));
+    for (const job of old.jobs) delete job.contributionCard;
+    for (const application of old.applications) delete application.contributionCard;
+    const parsed = stateSchema.parse(old);
+    expect(parsed.jobs.every((job) => job.contributionCard === "none")).toBe(true);
+    expect(parsed.applications.every((a) => a.contributionCard === undefined)).toBe(true);
+  });
+});

@@ -299,3 +299,148 @@
   background: var(--gui-color-1);
   color: var(--gui-text);
 }
+
+/* P1A contribution card: employer mode choice and candidate form section (host extension). */
+.contribution-mode {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 18px 20px;
+  border: 1px solid var(--pp-ink);
+  border-radius: var(--pp-radius);
+}
+.contribution-mode legend {
+  padding-inline: 6px;
+  margin-left: -6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.contribution-help {
+  display: block;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--gui-text-muted);
+}
+.contribution-mode-options {
+  gap: 4px;
+}
+.contribution-mode-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 32px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+.contribution-mode-option [data-slot="radio"] {
+  margin-top: 3px;
+}
+.contribution-mode-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.contribution-disclosure {
+  border-top: 1px solid var(--pp-line);
+}
+.contribution-disclosure summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 12px 0;
+  list-style: none;
+  cursor: pointer;
+}
+.contribution-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+.contribution-disclosure summary:hover {
+  background: var(--gui-color-1-transparent);
+}
+.contribution-disclosure summary:focus-visible {
+  outline: 2px solid var(--gui-focus);
+  outline-offset: 4px;
+}
+.contribution-disclosure summary svg {
+  flex-shrink: 0;
+}
+.contribution-disclosure[open] summary svg {
+  transform: rotate(180deg);
+}
+.contribution-preview {
+  display: grid;
+  gap: 8px;
+  padding: 0 0 6px 20px;
+  list-style: decimal;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.contribution-card > .application-help,
+.contribution-mode-note {
+  margin-bottom: 10px;
+}
+.contribution-mode-note,
+.contribution-count {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.contribution-count {
+  font-weight: 600;
+}
+.contribution-card .error-message {
+  margin-top: 12px;
+}
+.contribution-questions {
+  display: grid;
+  gap: 22px;
+  margin-top: 18px;
+}
+.contribution-question {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.contribution-question-label {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.contribution-question textarea {
+  min-height: 96px;
+  font-size: 15px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.contribution-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+.contribution-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.contribution-hint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--gui-text-muted);
+}
+@media (max-width: 600px) {
+  .contribution-mode {
+    padding: 16px;
+  }
+  .contribution-option {
+    min-height: 39px;
+    font-size: 15px;
+  }
+}

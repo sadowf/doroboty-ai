@@ -301,3 +301,25 @@
 .pp-offer-actions > :is(a, button) + :is(a, button) {
   margin-top: 10px;
 }
+
+/* P1A: informational note about a contribution card, shown before the Apply action. */
+.pp-offer-card-note {
+  margin: 0 26px 18px;
+  padding: 10px 14px;
+  border: 1px solid var(--pp-ink);
+  border-radius: var(--pp-radius-small);
+  background: var(--pp-paper);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 850px) {
+  .pp-offer-card-note {
+    margin-inline: 20px;
+  }
+}
+@media (max-width: 700px) {
+  .pp-offer-card-note {
+    margin-inline: 23px;
+  }
+}
