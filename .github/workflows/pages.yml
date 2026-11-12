@@ -37,7 +37,14 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # Vite inlines VITE_* values at build time. The PostHog project token is a public
+      # browser key, so it is a repository variable (Settings → Secrets and variables →
+      # Actions → Variables), not a secret. Without both variables the site builds with
+      # analytics off. CI builds deliberately run without them.
       - run: npm run build
+        env:
+          VITE_PUBLIC_POSTHOG_PROJECT_TOKEN: ${{ vars.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN }}
+          VITE_PUBLIC_POSTHOG_HOST: ${{ vars.VITE_PUBLIC_POSTHOG_HOST }}
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

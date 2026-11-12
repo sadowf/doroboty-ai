@@ -15,29 +15,34 @@ Hosting: **GitHub Pages** (chosen by sadowf on 2026-11-11), published by [.githu
 
 Build used by the workflow (and for a manual local build):
 
-| Setting          | Value                                      |
-| ---------------- | ------------------------------------------ |
-| Node             | 24 (from `.nvmrc`)                         |
-| Install          | `npm ci`                                   |
-| Build command    | `npm run build`                            |
-| Published folder | `dist/`                                    |
-| Environment vars | none required — do not add secrets         |
-| Routing          | hash routes (`/#/…`); no rewrites needed   |
-| Sub-path hosting | supported (`base: "./"` in vite.config.ts) |
+| Setting          | Value                                          |
+| ---------------- | ---------------------------------------------- |
+| Node             | 24 (from `.nvmrc`)                             |
+| Install          | `npm ci`                                       |
+| Build command    | `npm run build`                                |
+| Published folder | `dist/`                                        |
+| Environment vars | optional PostHog variables (below); no secrets |
+| Routing          | hash routes (`/#/…`); no rewrites needed       |
+| Sub-path hosting | supported (`base: "./"` in vite.config.ts)     |
 
 Never open `dist/index.html` from disk (`file://`); ES modules need HTTP.
 
+### Product analytics (PostHog)
+
+The Pages build step passes two repository **Actions variables** to `npm run build`: `VITE_PUBLIC_POSTHOG_PROJECT_TOKEN` (the public `phc_…` project token) and `VITE_PUBLIC_POSTHOG_HOST` (`https://eu.i.posthog.com`). Vite writes them into the bundle at build time, so changing them requires a new build (re-run the Pages workflow). Without them the site is published with analytics off. CI never receives them, so browser journeys stay free of external requests. Locally, copy `.env.example` to `.env.development` (dev server only); do not put them in `.env`, which Vite also loads for production builds and tests.
+
 ### One-time setup (owner)
 
-1. Repository **Settings → Pages → Build and deployment → Source: GitHub Actions**. Nothing else is needed: no branch, no custom domain, no secrets.
-2. The workflow only becomes active once `.github/workflows/pages.yml` is on `main` (GitHub reads `workflow_run` workflows from the default branch). The first publication happens with the first successful CI run on `main` after that, or by running **Actions → Publish to GitHub Pages → Run workflow** on `main`.
-3. Settings → Pages shows "Your site is live at …" after the first deployment. Leave **Enforce HTTPS** on (it is always on for `github.io` addresses).
+1. Repository **Settings → Pages → Build and deployment → Source: GitHub Actions**. No branch, no custom domain, no secrets.
+2. For analytics: **Settings → Secrets and variables → Actions → Variables → New repository variable**, add `VITE_PUBLIC_POSTHOG_PROJECT_TOKEN` and `VITE_PUBLIC_POSTHOG_HOST` (values above).
+3. The workflow only becomes active once `.github/workflows/pages.yml` is on `main` (GitHub reads `workflow_run` workflows from the default branch). The first publication happens with the first successful CI run on `main` after that, or by running **Actions → Publish to GitHub Pages → Run workflow** on `main`.
+4. Settings → Pages shows "Your site is live at …" after the first deployment. Leave **Enforce HTTPS** on (it is always on for `github.io` addresses).
 
 Limits (checked 2026-11-11): published site up to 1 GB, soft bandwidth limit 100 GB/month, deploy timeout 10 minutes. One full first load is about 2.5 MB, so 20 participants stay far below these.
 
 ### Security policy on a static host
 
-GitHub Pages cannot send custom response headers. The production build therefore declares, in `index.html`, a `Content-Security-Policy` (scripts, connections and frames only from the site itself, no plugins, no external images or fonts; inline styles allowed because the select list injects a small style element) and `referrer: no-referrer`. The development server is not affected. Protection against embedding the site in another page (`frame-ancestors`, `X-Frame-Options`) is not available on GitHub Pages; this is accepted because the app has no accounts, secrets or server actions.
+GitHub Pages cannot send custom response headers. The production build therefore declares, in `index.html`, a `Content-Security-Policy` (scripts, connections and frames only from the site itself plus the PostHog domain when analytics is configured, no plugins, no external images or fonts; inline styles allowed because the select list injects a small style element) and `referrer: no-referrer`. The development server is not affected. Protection against embedding the site in another page (`frame-ancestors`, `X-Frame-Options`) is not available on GitHub Pages; this is accepted because the app has no accounts, secrets or server actions.
 
 ## 2. Before merging to `main`
 
@@ -57,6 +62,7 @@ Who: the owner (sadowf). Use a fresh private browser window so no old local data
 6. Open **Profil** as Anna and download the CV PDF; it opens as a PDF.
 7. Copy a deep link (for example `…/#/oferty/ai-product-manager`), open it in a new tab: the same offer appears.
 8. Open the browser developer tools console: no red errors (in particular no "Content Security Policy" messages) during steps 3–7.
+9. Analytics (when the variables are set): the page source's `Content-Security-Policy` contains `posthog.com`; the Network tab shows requests to `eu.i.posthog.com`; PostHog → **Activity** shows `$pageview` events whose URL includes `#/…` and `$autocapture` clicks from steps 3–7. A missing analytics event is not a rollback reason.
 
 **Rollback condition:** if any of steps 1–7 fails and cannot be explained by your own browser, roll back (section 4) before participants use the site. Then record the failure in a task note.
 
