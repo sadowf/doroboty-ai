@@ -1,4 +1,6 @@
 import { Component, useEffect, useRef, useState, type ErrorInfo, type ReactNode } from "react";
+import posthog, { isPostHogConfigured } from "@/lib/posthog";
+import { posthogLogger } from "@/lib/posthog-logger";
 import { Button } from "@/components/ui/button";
 import { clearSave, readRawSave, type StoragePort } from "./storage";
 import { downloadText } from "./download";
@@ -112,8 +114,13 @@ export function ErrorFallback() {
  * stack, because messages may echo user-entered text. Development keeps React's full output.
  */
 export function logRenderError(error: unknown, info: Pick<ErrorInfo, "componentStack">) {
-  const name = error instanceof Error ? error.name : "unknown";
-  console.error(`Render error (${name})`, info.componentStack ?? "");
+  const exception = error instanceof Error ? error : new Error("Unknown render error");
+  if (isPostHogConfigured) posthog.captureException(exception);
+  posthogLogger.error("render_error_captured", {
+    error_type: exception.name,
+    has_component_stack: Boolean(info.componentStack),
+  });
+  console.error(`Render error (${exception.name})`, info.componentStack ?? "");
 }
 
 /** Catches render errors below it. Remount it (e.g. with a route key) to retry. */
