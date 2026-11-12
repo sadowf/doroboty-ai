@@ -26,6 +26,7 @@ import { usePrototype } from "./store";
 import { currentPerson, publishedJobs } from "./model";
 import { NotFound } from "./shell";
 import { contributionOfferNote } from "./contribution-card-view";
+import posthog, { isPostHogConfigured } from "@/lib/posthog";
 import { cn } from "@/lib/utils";
 
 function LocalMap({ jobs }: { jobs: JobWithCompany[] }) {
@@ -146,6 +147,12 @@ export function JobsPage() {
       const value = String(data.get(key) ?? "").trim();
       if (value) next.set(key, value);
       else next.delete(key);
+    }
+    if (isPostHogConfigured) {
+      const submittedFilters = parseJobFilters(Object.fromEntries(next));
+      posthog.capture("job_search_submitted", {
+        result_count: filterJobs(all, submittedFilters).length,
+      });
     }
     setParams(next);
   }
